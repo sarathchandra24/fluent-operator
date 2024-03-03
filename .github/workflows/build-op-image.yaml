@@ -35,7 +35,7 @@ jobs:
     name: Build Image for Fluent Operator
     outputs:
       IMG_VERSION: ${{ steps.image-metadata.outputs.version }}
-      IMG_NAME: ${{ steps.image-metadata.outputs.tags }}[0]
+      IMG_NAME: ${{ steps.image-metadata.outputs.tags }}
       OPERATOR_DOCKER_IMG: "${{ env.REGISTRY_REPO }}/${{ env.DOCKER_IMAGE }}"
 
     steps:
@@ -54,7 +54,7 @@ jobs:
         uses: docker/login-action@v1
         with:
           registry: ghcr.io
-          username: ${{ github.actor }}
+          username: ${{ github.actor_id }}
           password: ${{ secrets.GITHUB_TOKEN }}
       
       - name: docker metadata
