@@ -28,12 +28,14 @@ env:
   DOCKER_IMAGE: 'fluent-operator'
   GITHUB_IMAGE: "${{ github.repository }}/fluent-operator"
 
-
 jobs:
-  operator-buils:
+  operator-build:
     runs-on: ubuntu-latest
     timeout-minutes: 30
     name: Build Image for Fluent Operator
+    outputs:
+      IMG_VERSION: ${{ steps.image-metadata.outputs.version }}
+      IMG_NAME: ${{ env.GITHUB_IMAGE }}
     steps:
       - name: Checkout code
         uses: actions/checkout@v2
@@ -62,6 +64,7 @@ jobs:
             raw,latest
             type=ref,event=branch
             type=ref,event=pr
+            type=ref,event=tag
             type=semver,pattern={{version}}
             type=semver,pattern={{major}}.{{minor}}
 
@@ -74,3 +77,16 @@ jobs:
           platforms: linux/amd64,linux/arm64
           tags: ${{ steps.image-metadata.outputs.tags }}
           labels: ${{ steps.image-metadata.outputs.labels }}
+
+  scan-operator-image:
+    name: Scan Docker Image
+    needs: 
+      - operator-build
+    uses: ./.github/workflows/call-scan-images.yaml
+    with:
+      source_image: "${{ needs.operator-build.outputs.IMG_NAME }}:${{ needs.operator-build.outputs.IMG_VERSION }}"
+      source_registry: ghcr.io
+      platforms: '["linux/arm64", "linux/amd64"]'
+    secrets:
+      registry_username: ${{ github.actor }}
+      registry_password: ${{ secrets.GITHUB_TOKEN }}
