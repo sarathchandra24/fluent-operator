@@ -18,6 +18,7 @@ on:
       - "pkg/fluentd/operator/**"
       - "pkg/fluentd/utils/**"
       - "Makefile"
+      
   pull_request:
     branches:
       - 'master'
