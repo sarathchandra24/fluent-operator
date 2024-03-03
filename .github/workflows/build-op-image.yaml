@@ -63,9 +63,14 @@ jobs:
       - name: Set outputs
         id: set-outputs
         run: |
-          echo "FULL_IMAGE_NAME=$(${{ steps.image-metadata.outputs.json }} | jq '.tags[0]')" >> $GITHUB_OUTPUT
+          echo "FULL_IMAGE_NAME=$(echo '${{ steps.image-metadata.outputs.json }}' | jq '.tags[0]')" >> $GITHUB_OUTPUT
           echo "IMAGE_NAME=${{ env.GITHUB_IMAGE }}" >> $GITHUB_OUTPUT
           echo "DOCKER_IMG_NAME=${{env.DOCKER_REPO}}/${{ env.DOCKER_IMAGE }}" >> $GITHUB_OUTPUT
+
+          echo "FULL_IMAGE_NAME=$(echo '${{ steps.image-metadata.outputs.json }}'
+          echo "IMAGE_NAME=${{ env.GITHUB_IMAGE }}"
+          echo "DOCKER_IMG_NAME=${{env.DOCKER_REPO}}/${{ env.DOCKER_IMAGE }}"
+
 
   operator-build:
     runs-on: ubuntu-latest
