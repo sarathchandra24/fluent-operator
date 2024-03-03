@@ -40,9 +40,6 @@
   
   jobs:
     check-image-exists:
-      permissions:
-        contents: read
-        packages: read
       strategy:
         matrix:
           platform: ${{ fromJson(inputs.platforms) }}
