@@ -87,7 +87,7 @@ jobs:
         uses: docker/login-action@v1
         with:
           registry: ghcr.io
-          username: ${{ github.actor_id }}
+          username: ${{ github.actor }}
           password: ${{ secrets.GITHUB_TOKEN }}
 
       - name: Build and push
@@ -111,7 +111,7 @@ jobs:
       source_registry: ghcr.io
       platforms: '["linux/arm64", "linux/amd64"]'
     secrets:
-      registry_username: ${{ github.actor_id }}
+      registry_username: ${{ github.actor }}
       registry_password: ${{ secrets.GITHUB_TOKEN }}
 
   release-image-to-docker-hub:
@@ -129,7 +129,7 @@ jobs:
       target_registry: docker.io
       platforms: "['linux/arm64', 'linux/amd64']"
     secrets:
-      source_registry_username:  ${{ github.actor_id }}
+      source_registry_username:  ${{ github.actor }}
       source_registry_token: ${{ secrets.GITHUB_TOKEN }}
       target_registry_username: ${{ secrets.REGISTRY_USER }}
       target_registry_token: ${{ secrets.REGISTRY_PASSWORD }}
