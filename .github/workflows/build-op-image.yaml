@@ -29,6 +29,10 @@ env:
   DOCKER_IMAGE: 'fluent-operator'
   GITHUB_IMAGE: "${{ github.repository }}/fluent-operator"
 
+permissions:
+  contents: read
+  packages: write
+
 jobs:
   build-image-metadata:
     runs-on: ubuntu-latest
