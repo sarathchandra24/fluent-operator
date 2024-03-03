@@ -9,6 +9,7 @@ on:
       - 'v*'
     paths:
       - ".github/workflows/build-op-image.yaml"
+      - "./.github/workflows/call-clone-images.yaml"
       - "apis/**"
       - "cmd/fluent-manager/**"
       - "controllers/**"

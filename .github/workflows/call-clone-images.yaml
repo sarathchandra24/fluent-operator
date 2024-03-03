@@ -71,13 +71,13 @@
       needs: check-image-exists
       runs-on: ubuntu-latest
       steps:
-        - name: Login to target container registry ${{ inputs.target_registry }}
-          run: |
-            echo "${{ secrets.target_registry_token }}" | docker login ${{ inputs.target_registry }} -u ${{ secrets.target_registry_username }} --password-stdin
-            mkdir -p $HOME/.docker
-            cp ~/.docker/config.json $HOME/.docker/auth.json
-          env:
-            DOCKER_CONFIG: /home/runner/work/_temp/.docker
+        # - name: Login to target container registry ${{ inputs.target_registry }}
+        #   run: |
+        #     echo "${{ secrets.target_registry_token }}" | docker login ${{ inputs.target_registry }} -u ${{ secrets.target_registry_username }} --password-stdin
+        #     mkdir -p $HOME/.docker
+        #     cp ~/.docker/config.json $HOME/.docker/auth.json
+        #   env:
+        #     DOCKER_CONFIG: /home/runner/work/_temp/.docker
 
         # - name: Login to source container registry ${{ inputs.source_registry }}
         #   uses: docker/login-action@v3
@@ -96,8 +96,8 @@
               --retry-times 10 \
               --src-no-creds \
               --dest-creds "$RELEASE_CREDS" \
-              "docker://$STAGING_IMAGE_NAME:$TAG" \
-              "docker://$RELEASE_IMAGE_NAME:$TAG"
+              "docker://$SOURCE_IMAGE" \
+              "docker://$RELEASE_IMAGE"
           env:
             SOURCE_IMAGE: "${{ inputs.source_registry }}/${{ inputs.source_image }}"
             RELEASE_IMAGE: "${{ inputs.target_registry }}/${{ inputs.target_image }}"
