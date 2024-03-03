@@ -43,7 +43,7 @@
         - name: Trivy - multi-arch
           uses: aquasecurity/trivy-action@0.13.1
           with:
-            image-ref: ${{ inputs.source_registry }}/${{ inputs.source_image }}
+            image-ref: ${{ inputs.source_image }}
             format: "table"
             exit-code: "1"
             ignore-unfixed: true
@@ -60,6 +60,6 @@
         - name: Dockle - multi-arch
           uses: hands-lab/dockle-action@v1
           with:
-            image: ${{ inputs.source_registry }}/${{ inputs.source_image }}
+            image: ${{ inputs.source_image }}
             exit-code: "1"
             exit-level: WARN
