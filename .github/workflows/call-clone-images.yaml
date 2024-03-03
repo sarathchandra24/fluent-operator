@@ -71,19 +71,10 @@
       needs: check-image-exists
       runs-on: ubuntu-latest
       steps:
-        - name: Login to Docker Registry
-          run: |
-            echo "${{ secrets.target_registry_token }}" | docker login ${{ inputs.target_registry }} -u ${{ secrets.target_registry_username }} --password-stdin
-            mkdir -p $HOME/.docker
-            cp ~/.docker/config.json $HOME/.docker/auth.json
-          env:
-            DOCKER_CONFIG: /home/runner/work/_temp/.docker
-            
         - name: Promote container images from ${{ inputs.source_registry }} to ${{ inputs.target_registry }}
           run: |
             echo "Promoting $SOURCE_IMAGE to $RELEASE_IMAGE"
             docker run --rm  \
-              -v $HOME/.docker:/root/.docker \
               quay.io/skopeo/stable:latest \
               copy \
                 --all \
@@ -96,3 +87,4 @@
             SOURCE_IMAGE: ${{ inputs.source_registry }}/${{ inputs.source_image }}
             RELEASE_IMAGE: ${{ inputs.target_registry }}/${{ inputs.target_image }}
             RELEASE_CREDS: ${{ secrets.target_registry_username }}:${{ secrets.target_registry_token }}
+  
