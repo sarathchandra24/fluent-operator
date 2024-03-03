@@ -107,7 +107,7 @@ jobs:
       - build-image-metadata
     uses: ./.github/workflows/call-scan-images.yaml
     with:
-      source_image: "${{ needs.build-image-metadata.outputs.IMG_NAME }}"
+      source_image: "${{ needs.build-image-metadata.outputs.IMG_NAME }}:${{ needs.build-image-metadata.outputs.version }}"
       source_registry: ghcr.io
       platforms: '["linux/arm64", "linux/amd64"]'
     secrets:
@@ -123,7 +123,7 @@ jobs:
       - scan-operator-image
       - build-image-metadata
     with:
-      source_image: "${{ needs.build-image-metadata.outputs.IMG_NAME }}"
+      source_image: "${{ needs.build-image-metadata.outputs.IMG_NAME }}:${{ needs.build-image-metadata.outputs.version }}"
       source_registry: ghcr.io
       target_image: ${{ needs.build-image-metadata.outputs.DOCKER_IMG_NAME }}
       target_registry: docker.io

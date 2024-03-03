@@ -39,7 +39,11 @@
             registry: ${{ inputs.source_registry }}
             username: ${{ secrets.registry_username }}
             password: ${{ secrets.registry_password }}
-  
+        
+        - name: check docker image exists
+          run: |
+            docker pull ${{ inputs.source_registry }}/${{ inputs.source_image }}
+
         - name: Trivy - multi-arch
           uses: aquasecurity/trivy-action@0.13.1
           with:
