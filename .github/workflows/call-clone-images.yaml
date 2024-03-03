@@ -64,7 +64,7 @@
           run: 
             docker pull "$SOURCE_IMAGE" --platform=${{ matrix.platform }}
           env:
-            SOURCE_IMAGE: ${{ inputs.source_image }}
+            SOURCE_IMAGE: ${{ inputs.source_registry }}/${{ inputs.source_image }}
           shell: bash
   
     push-image:
@@ -84,7 +84,7 @@
                 "docker://$SOURCE_IMAGE" \
                 "docker://$RELEASE_IMAGE"
           env:
-            SOURCE_IMAGE: ${{ inputs.source_image }}
+            SOURCE_IMAGE: ${{ inputs.source_registry }}/${{ inputs.source_image }}
             RELEASE_IMAGE: ${{ inputs.target_registry }}/${{ inputs.target_image }}
             RELEASE_CREDS: ${{ secrets.target_registry_username }}:${{ secrets.target_registry_token }}
   
