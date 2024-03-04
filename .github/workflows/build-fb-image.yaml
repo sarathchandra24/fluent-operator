@@ -77,8 +77,8 @@ jobs:
           tags: |
             raw,latest-debug
             type=ref,event=branch
-            type=ref,event=pr
-            type=ref,event=tag
+            type=ref,event=pr,pattern=${{ github.event.pull_request.id }}-debug
+            type=ref,event=tag,pattern=${{ github.ref_name }}-debug
             type=semver,pattern={{version}}-debug
             type=semver,pattern={{major}}.{{minor}}-debug
 
@@ -93,7 +93,7 @@ jobs:
       - build-prod-image-metadata
     runs-on: ubuntu-latest
     timeout-minutes: 30
-    name: Build prod image for Fluent Bit
+    name: Build Fluent Bit prod image
     steps:
       - name: Install Go
         uses: actions/setup-go@v4
