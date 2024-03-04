@@ -72,7 +72,7 @@ jobs:
         with:
           images: "ghcr.io/${{ env.GITHUB_IMAGE }}"
           tags: |
-            raw,latest,suffix=-debug
+            raw,suffix=-debug
             type=ref,event=branch,suffix=-debug
             type=ref,event=pr,suffix=-debug
             type=ref,event=tag,suffix=-debug
@@ -171,6 +171,7 @@ jobs:
           push: true
           platforms: linux/amd64,linux/arm64
           tags: ${{ needs.build-debug-image-metadata.outputs.tags }}
+          labels: ${{ needs.build-debug-image-metadata.outputs.labels }}
 
   scan-FluentBit-image:
     name: Scan prod image
