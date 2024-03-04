@@ -9,7 +9,7 @@ on:
       - 'v*'
     paths:
       - ".github/workflows/build-fb-image.yaml"
-      - "cmd/fluent-watcher/fluentbit/**"
+      - "cmd/fluent-watcher/FluentBit/**"
       - "cmd/fluent-watcher/hooks/**"
       - "pkg/filenotify/**"
   pull_request:
@@ -20,13 +20,11 @@ env:
   DOCKER_REPO: 'sarathchandra24'
   DOCKER_IMAGE: 'fluent-bit'
   GITHUB_IMAGE: '${{ github.repository }}/fluent-bit'
-  # FB_IMG: 'kubesphere/fluent-bit:v2.2.2'
-  # FB_IMG_DEBUG: 'kubesphere/fluent-bit:v2.2.2-debug'
 
 jobs:
-  build-image-metadata:
+  build-prod-image-metadata:
     runs-on: ubuntu-latest
-    name: Build Image Metadata
+    name: Build prod image metadata
     outputs:
       IMG_NAME: ${{ steps.set-outputs.outputs.IMAGE_NAME }}
       DOCKER_IMG_NAME: ${{ steps.set-outputs.outputs.DOCKER_IMG_NAME }}
@@ -59,7 +57,7 @@ jobs:
 
   build-debug-image-metadata:
     runs-on: ubuntu-latest
-    name: Build Image Metadata
+    name: Build debug image metadata
     outputs:
       IMG_NAME: ${{ steps.set-outputs.outputs.IMAGE_NAME }}
       DOCKER_IMG_NAME: ${{ steps.set-outputs.outputs.DOCKER_IMG_NAME }}
@@ -90,12 +88,12 @@ jobs:
           echo "IMAGE_NAME=${{ env.GITHUB_IMAGE }}" >> $GITHUB_OUTPUT
           echo "DOCKER_IMG_NAME=${{env.DOCKER_REPO}}/${{ env.DOCKER_IMAGE }}" >> $GITHUB_OUTPUT
 
-  build-fluentbit-image:
+  build-FluentBit-prod-image:
     needs: 
-      - build-image-metadata
+      - build-prod-image-metadata
     runs-on: ubuntu-latest
     timeout-minutes: 30
-    name: Build Image for Fluent Bit
+    name: Build prod image for Fluent Bit
     steps:
       - name: Install Go
         uses: actions/setup-go@v4
@@ -128,18 +126,18 @@ jobs:
         uses: docker/build-push-action@v2
         with:
           context: .
-          file: ./cmd/fluent-watcher/fluentbit/Dockerfile
+          file: ./cmd/fluent-watcher/FluentBit/Dockerfile
           push: true
           platforms: linux/amd64,linux/arm64
-          tags: ${{ needs.build-image-metadata.outputs.tags }}
-          labels: ${{ needs.build-image-metadata.outputs.labels }}
+          tags: ${{ needs.build-prod-image-metadata.outputs.tags }}
+          labels: ${{ needs.build-prod-image-metadata.outputs.labels }}
 
-  build-fluentbit-debug-image:
+  build-FluentBit-debug-image:
     needs: 
       - build-debug-image-metadata
     runs-on: ubuntu-latest
     timeout-minutes: 30
-    name: Build Image for Fluent Bit
+    name: Build Fluent Bit debug image
     steps:
       - name: Install Go
         uses: actions/setup-go@v4
@@ -167,42 +165,42 @@ jobs:
         id: buildx
         uses: docker/setup-buildx-action@v3
       
-      - name: Build and Push Debug Image for Fluent Bit
+      - name: Build and Push Fluent Bit Debug Image
         id: docker-build-debug
         uses: docker/build-push-action@v2
         with:
           context: .
-          file: ./cmd/fluent-watcher/fluentbit/Dockerfile.debug
+          file: ./cmd/fluent-watcher/FluentBit/Dockerfile.debug
           push: true
           platforms: linux/amd64,linux/arm64
           tags: ${{ needs.build-debug-image-metadata.outputs.tags }}
 
-  scan-fluentbit-image:
-    name: Scan Docker Image
+  scan-FluentBit-image:
+    name: Scan prod image
     needs: 
-      - build-image-metadata
-      - build-fluentbit-image
+      - build-prod-image-metadata
+      - build-FluentBit-prod-image
     uses: ./.github/workflows/scan-docker-image-action.yaml
     with:
-      source_image: "${{ needs.build-image-metadata.outputs.IMG_NAME }}:${{ needs.build-image-metadata.outputs.version }}"
+      source_image: "${{ needs.build-prod-image-metadata.outputs.IMG_NAME }}:${{ needs.build-prod-image-metadata.outputs.version }}"
       source_registry: ghcr.io
       platforms: "['linux/arm64', 'linux/amd64']"
     secrets:
       registry_username: ${{ github.actor }}
       registry_password: ${{ secrets.GITHUB_TOKEN }}
   
-  release-image-to-docker-hub:
+  release-prod-image-to-docker-hub:
     if: ${{ github.event_name != 'pull_request' }}
-    name: Release Image to Docker Hub
+    name: Release prod image to Docker Hub
     uses: ./.github/workflows/clone-docker-image-action.yaml
     needs: 
-      - build-fluentbit-image
-      - scan-fluentbit-image
-      - build-image-metadata
+      - build-FluentBit-prod-image
+      - scan-FluentBit-image
+      - build-prod-image-metadata
     with:
-      source_image: "${{ needs.build-image-metadata.outputs.IMG_NAME }}:${{ needs.build-image-metadata.outputs.version }}"
+      source_image: "${{ needs.build-prod-image-metadata.outputs.IMG_NAME }}:${{ needs.build-prod-image-metadata.outputs.version }}"
       source_registry: ghcr.io
-      target_image: "${{ needs.build-image-metadata.outputs.DOCKER_IMG_NAME }}:${{ needs.build-image-metadata.outputs.version }}"
+      target_image: "${{ needs.build-prod-image-metadata.outputs.DOCKER_IMG_NAME }}:${{ needs.build-prod-image-metadata.outputs.version }}"
       target_registry: docker.io
       platforms: "['linux/arm64', 'linux/amd64']"
     secrets:
@@ -213,10 +211,10 @@ jobs:
 
   release-debug-image-to-docker-hub:
     if: ${{ github.event_name != 'pull_request' }}
-    name: Release Image to Docker Hub
+    name: Release debug image to Docker Hub
     uses: ./.github/workflows/clone-docker-image-action.yaml
     needs: 
-      - build-fluentbit-debug-image
+      - build-FluentBit-debug-image
       - build-debug-image-metadata
     with:
       source_image: "${{ needs.build-debug-image-metadata.outputs.IMG_NAME }}:${{ needs.build-debug-image-metadata.outputs.version }}"
