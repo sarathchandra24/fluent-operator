@@ -124,8 +124,8 @@ jobs:
     name: Release Image to Docker Hub
     uses: ./.github/workflows/call-clone-images.yaml
     needs: 
-      # - operator-build
-      # - scan-operator-image
+      - operator-build
+      - scan-operator-image
       - build-image-metadata
     with:
       source_image: "${{ needs.build-image-metadata.outputs.IMG_NAME }}:${{ needs.build-image-metadata.outputs.version }}"
