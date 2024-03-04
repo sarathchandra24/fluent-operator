@@ -71,7 +71,6 @@
               copy \
                 --all \
                 --retry-times 10 \
-                --src-no-creds \
                 --dest-creds "$RELEASE_CREDS" \
                 --src-creds "$SOURCE_CREDS" \
                 "docker://$SOURCE_IMAGE" \
