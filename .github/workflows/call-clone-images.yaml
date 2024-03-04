@@ -70,6 +70,11 @@
       needs: check-image-exists
       runs-on: ubuntu-latest
       steps:
+        - name: Install Skopeo
+          run: |
+            sudo apt-get update
+            sudo apt-get install -y skopeo
+
         - name: Login to target container registry ${{ inputs.target_registry }}
           uses: docker/login-action@v3
           with:
@@ -87,11 +92,7 @@
         - name: Promote container images from ${{ inputs.source_registry }} to ${{ inputs.target_registry }}
           run: |
             echo "Promoting $SOURCE_IMAGE to $RELEASE_IMAGE"
-            docker run --rm -v  \
-            /var/run/docker.sock:/var/run/docker.sock \ 
-            quay.io/skopeo/stable \
-            docker://${{ env.SOURCE_IMAGE }} \ 
-            docker://${{ env.RELEASE_IMAGE }}
+            skopeo copy --all --dest-creds $RELEASE_CREDS docker://$SOURCE_IMAGE docker://$RELEASE_IMAGE
           env:
             SOURCE_IMAGE: "${{ inputs.source_registry }}/${{ inputs.source_image }}"
             RELEASE_IMAGE: "${{ inputs.target_registry }}/${{ inputs.target_image }}"
