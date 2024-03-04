@@ -84,7 +84,7 @@ jobs:
 
       - name: Process and append "-debug" to tags
         run: |
-          original_tags=${{ steps.image-metadata.outputs.tags }}
+          original_tags="${{ steps.image-metadata.outputs.tags }}"
           echo "tags: ${{ steps.image-metadata.outputs.tags }}"
           debug_tags=""
           for tag in $original_tags; do
