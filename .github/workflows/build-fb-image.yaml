@@ -16,7 +16,7 @@ on:
       - "master"
 
 env:
-  DOCKER_REPO: 'sarathchandra24'
+  DOCKER_REPO: 'kubesphere'
   DOCKER_IMAGE: 'fluent-bit'
   GITHUB_IMAGE: '${{ github.repository }}/fluent-bit'
 
