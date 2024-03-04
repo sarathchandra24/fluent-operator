@@ -76,7 +76,7 @@ jobs:
           images: "ghcr.io/${{ env.GITHUB_IMAGE }}"
           tags: |
             raw,latest-debug
-            type=ref,event=branch,pattern=${{ github.ref_name }}
+            type=ref,event=branch,pattern=${{ github.ref_name }}-debug
             type=ref,event=pr,pattern=${{ github.event.pull_request.id }}-debug
             type=ref,event=tag,pattern=${{ github.ref_name }}-debug
             type=semver,pattern={{version}}-debug
