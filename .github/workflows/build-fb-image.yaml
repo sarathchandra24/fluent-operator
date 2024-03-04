@@ -22,37 +22,37 @@ env:
   GITHUB_IMAGE: '${{ github.repository }}/fluent-bit'
 
 jobs:
-  build-prod-image-metadata:
-    runs-on: ubuntu-latest
-    name: Build prod image metadata
-    outputs:
-      IMG_NAME: ${{ steps.set-outputs.outputs.IMAGE_NAME }}
-      DOCKER_IMG_NAME: ${{ steps.set-outputs.outputs.DOCKER_IMG_NAME }}
-      version: ${{ steps.image-metadata.outputs.version }}
-      tags: ${{ steps.image-metadata.outputs.tags }}
-      labels: ${{ steps.image-metadata.outputs.labels }}
-    steps:
-      - name: Checkout code
-        uses: actions/checkout@v4
+  # build-prod-image-metadata:
+  #   runs-on: ubuntu-latest
+  #   name: Build prod image metadata
+  #   outputs:
+  #     IMG_NAME: ${{ steps.set-outputs.outputs.IMAGE_NAME }}
+  #     DOCKER_IMG_NAME: ${{ steps.set-outputs.outputs.DOCKER_IMG_NAME }}
+  #     version: ${{ steps.image-metadata.outputs.version }}
+  #     tags: ${{ steps.image-metadata.outputs.tags }}
+  #     labels: ${{ steps.image-metadata.outputs.labels }}
+  #   steps:
+  #     - name: Checkout code
+  #       uses: actions/checkout@v4
             
-      - name: docker metadata
-        id: image-metadata
-        uses: docker/metadata-action@v5
-        with:
-          images: "ghcr.io/${{ env.GITHUB_IMAGE }}"
-          tags: |
-            raw,latest
-            type=ref,event=branch
-            type=ref,event=pr
-            type=ref,event=tag
-            type=semver,pattern={{version}}
-            type=semver,pattern={{major}}.{{minor}}
+  #     - name: docker metadata
+  #       id: image-metadata
+  #       uses: docker/metadata-action@v5
+  #       with:
+  #         images: "ghcr.io/${{ env.GITHUB_IMAGE }}"
+  #         tags: |
+  #           raw,latest
+  #           type=ref,event=branch
+  #           type=ref,event=pr
+  #           type=ref,event=tag
+  #           type=semver,pattern={{version}}
+  #           type=semver,pattern={{major}}.{{minor}}
 
-      - name: Set outputs
-        id: set-outputs
-        run: |
-          echo "IMAGE_NAME=${{ env.GITHUB_IMAGE }}" >> $GITHUB_OUTPUT
-          echo "DOCKER_IMG_NAME=${{env.DOCKER_REPO}}/${{ env.DOCKER_IMAGE }}" >> $GITHUB_OUTPUT
+  #     - name: Set outputs
+  #       id: set-outputs
+  #       run: |
+  #         echo "IMAGE_NAME=${{ env.GITHUB_IMAGE }}" >> $GITHUB_OUTPUT
+  #         echo "DOCKER_IMG_NAME=${{env.DOCKER_REPO}}/${{ env.DOCKER_IMAGE }}" >> $GITHUB_OUTPUT
 
   build-debug-image-metadata:
     runs-on: ubuntu-latest
@@ -73,13 +73,13 @@ jobs:
         with:
           images: "ghcr.io/${{ env.GITHUB_IMAGE }}"
           tags: |
-            raw,suffix=debug
-            raw,latest,suffix=debug
-            type=ref,event=branch,suffix=debug
-            type=ref,event=pr,suffix=debug
-            type=ref,event=tag,suffix=debug
-            type=semver,pattern={{version}},suffix=debug
-            type=semver,pattern={{major}}.{{minor}},suffix=debug
+            raw,suffix=-debug
+            raw,latest,suffix=-debug
+            type=ref,event=branch,suffix=-debug
+            type=ref,event=pr,suffix=-debug
+            type=ref,event=tag,suffix=-debug
+            type=semver,pattern={{version}},suffix=-debug
+            type=semver,pattern={{major}}.{{minor}},suffix=-debug
       
       - name: Set outputs
         id: set-outputs
