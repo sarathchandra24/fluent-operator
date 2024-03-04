@@ -57,8 +57,6 @@ jobs:
   build-debug-image-metadata:
     runs-on: ubuntu-latest
     name: Build debug image metadata
-    needs: 
-      - build-prod-image-metadata
     outputs:
       IMG_NAME: ${{ steps.process-tags.outputs.IMAGE_NAME }}
       DOCKER_IMG_NAME: ${{ steps.process-tags.outputs.DOCKER_IMG_NAME }}
@@ -69,20 +67,36 @@ jobs:
       - name: Checkout code
         uses: actions/checkout@v4
 
+      - name: docker metadata
+        id: image-metadata
+        uses: docker/metadata-action@v5
+        with:
+          images: "ghcr.io/${{ env.GITHUB_IMAGE }}"
+          tags: |
+            raw,latest
+            type=ref,event=branch
+            type=ref,event=pr
+            type=ref,event=tag
+            type=semver,pattern={{version}}
+            type=semver,pattern={{major}}.{{minor}}
+      - name: Set outputs
+        id: set-outputs
+        run: |
+          echo "IMAGE_NAME=${{ env.GITHUB_IMAGE }}" >> $GITHUB_OUTPUT
+          echo "DOCKER_IMG_NAME=${{env.DOCKER_REPO}}/${{ env.DOCKER_IMAGE }}" >> $GITHUB_OUTPUT
+
       - name: Process and append "-debug" to tags
         id: process-tags
         run: |
-          original_tags="${{ needs.build-prod-image-metadata.outputs.tags }}"
-          original_version="${{ needs.build-prod-image-metadata.outputs.version }}"
+          original_tags="${{ steps.image-metadata.outputs.tags }}"
+          original_version="${{ steps.image-metadata.outputs.version }}"
           debug_tags=""
           for tag in $original_tags; do
             debug_tags="$debug_tags $tag-debug"
           done
-          echo "IMAGE_NAME=${{ needs.build-prod-image-metadata.outputs.IMG_NAME }}" >> $GITHUB_OUTPUT
-          echo "DOCKER_IMG_NAME=${{ needs.build-prod-image-metadata.outputs.DOCKER_IMG_NAME }}" >> $GITHUB_OUTPUT
           echo "version=${original_version}-debug" >> $GITHUB_OUTPUT
           echo "tags=${debug_tags}" >> $GITHUB_OUTPUT
-          echo "labels=${{ needs.build-prod-image-metadata.outputs.labels }}" >> $GITHUB_OUTPUT
+          echo "labels=${{  steps.image-metadata.outputs.labels }}" >> $GITHUB_OUTPUT
 
   build-FluentBit-prod-image:
     needs: 
