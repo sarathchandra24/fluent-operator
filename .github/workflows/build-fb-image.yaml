@@ -58,40 +58,34 @@ jobs:
   build-debug-image-metadata:
     runs-on: ubuntu-latest
     name: Build debug image metadata
+    needs: 
+      - build-prod-image-metadata
     outputs:
       IMG_NAME: ${{ steps.set-outputs.outputs.IMAGE_NAME }}
       DOCKER_IMG_NAME: ${{ steps.set-outputs.outputs.DOCKER_IMG_NAME }}
-      version: ${{ steps.image-metadata.outputs.version }}-debug
-      tags: ${{ steps.image-metadata.outputs.tags }}
-      labels: ${{ steps.image-metadata.outputs.labels }}
+      version: ${{ steps.process-tags.outputs.version }}
+      tags: ${{ steps.process-tags.outputs.tags }}
+      labels: ${{ steps.process-tags.outputs.labels }}
 
     steps:
       - name: Checkout code
         uses: actions/checkout@v4
-            
-      - name: docker metadata
-        id: image-metadata
-        uses: docker/metadata-action@v5
-        with:
-          images: "ghcr.io/${{ env.GITHUB_IMAGE }}"
-          tags: |
-            raw,latest-debug
-            type=ref,event=branch,pattern=${{ github.ref_name }}
-            type=ref,event=pr,pattern=${{ github.event.pull_request.id }}
-            type=ref,event=tag,pattern=${{ github.ref_name }}
-            type=semver,pattern={{version}}
-            type=semver,pattern={{major}}.{{minor}}
 
       - name: Process and append "-debug" to tags
+        id: process-tags
         run: |
-          original_tags="${{ steps.image-metadata.outputs.tags }}"
-          echo "tags: ${{ steps.image-metadata.outputs.tags }}"
+          original_tags="${{ needs.build-prod-image-metadata.outputs.tags }}"
+          original_version="${{ needs.build-prod-image-metadata.outputs.version }}"
+          echo "tags: ${{ needs.build-prod-image-metadata.outputs.tags }}"
           debug_tags=""
           for tag in $original_tags; do
             debug_tags="$debug_tags $tag-debug"
           done
-          echo "debug_tags=$debug_tags" >> $GITHUB_OUTPUT
-          echo "debug_tags=$debug_tags"
+          echo "IMAGE_NAME=${{ needs.build-prod-image-metadata.outputs.IMG_NAME }}" >> $GITHUB_OUTPUT
+          echo "DOCKER_IMG_NAME=${{ needs.build-prod-image-metadata.outputs.DOCKER_IMG_NAME }}" >> $GITHUB_OUTPUT
+          echo "version=$original_version-debug" >> $GITHUB_OUTPUT
+          echo "tags=$debug_tags" >> $GITHUB_OUTPUT
+          echo "labels=${{ needs.build-prod-image-metadata.outputs.labels }}" >> $GITHUB_OUTPUT
 
       - name: Set outputs
         id: set-outputs
