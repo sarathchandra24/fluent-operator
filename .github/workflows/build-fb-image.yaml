@@ -61,7 +61,7 @@ jobs:
     outputs:
       IMG_NAME: ${{ steps.set-outputs.outputs.IMAGE_NAME }}
       DOCKER_IMG_NAME: ${{ steps.set-outputs.outputs.DOCKER_IMG_NAME }}
-      version: ${{ steps.image-metadata.outputs.version }}
+      version: ${{ steps.image-metadata.outputs.version }}-debug
       tags: ${{ steps.image-metadata.outputs.tags }}
       labels: ${{ steps.image-metadata.outputs.labels }}
 
@@ -76,7 +76,7 @@ jobs:
           images: "ghcr.io/${{ env.GITHUB_IMAGE }}"
           tags: |
             raw,latest-debug
-            type=ref,event=branch
+            type=ref,event=branch,pattern=${{ github.ref_name }}
             type=ref,event=pr,pattern=${{ github.event.pull_request.id }}-debug
             type=ref,event=tag,pattern=${{ github.ref_name }}-debug
             type=semver,pattern={{version}}-debug
