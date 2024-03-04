@@ -71,13 +71,16 @@ jobs:
         uses: docker/metadata-action@v5
         with:
           images: "ghcr.io/${{ env.GITHUB_IMAGE }}"
+          flavor: |
+            latest=false
+            suffix=-debug
           tags: |
-            raw,suffix=-debug
-            type=ref,event=branch,suffix=-debug
-            type=ref,event=pr,suffix=-debug
-            type=ref,event=tag,suffix=-debug
-            type=semver,pattern={{version}},suffix=-debug
-            type=semver,pattern={{major}}.{{minor}},suffix=-debug
+            raw,latest
+            type=ref,event=branch
+            type=ref,event=pr
+            type=ref,event=tag
+            type=semver,pattern={{version}}
+            type=semver,pattern={{major}}.{{minor}}
       
       - name: Set outputs
         id: set-outputs
