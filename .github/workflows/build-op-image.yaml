@@ -9,7 +9,7 @@ on:
       - 'v*'
     paths:
       - ".github/workflows/build-op-image.yaml"
-      - ".github/workflows/call-clone-images.yaml"
+      - ".github/workflows/clone-docker-image-action.yaml"
       - "apis/**"
       - "cmd/fluent-manager/**"
       - "controllers/**"
@@ -110,7 +110,7 @@ jobs:
     needs: 
       - operator-build
       - build-image-metadata
-    uses: ./.github/workflows/call-scan-images.yaml
+    uses: ./.github/workflows/scan-docker-image-action.yaml
     with:
       source_image: "${{ needs.build-image-metadata.outputs.IMG_NAME }}:${{ needs.build-image-metadata.outputs.version }}"
       source_registry: ghcr.io
@@ -122,7 +122,7 @@ jobs:
   release-image-to-docker-hub:
     if: ${{ github.event_name != 'pull_request' }}
     name: Release Image to Docker Hub
-    uses: ./.github/workflows/call-clone-images.yaml
+    uses: ./.github/workflows/clone-docker-image-action.yaml
     needs: 
       - operator-build
       - scan-operator-image
