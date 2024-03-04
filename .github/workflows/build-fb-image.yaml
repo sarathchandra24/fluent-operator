@@ -4,6 +4,7 @@ on:
   push:
     branches:
       - 'master'
+      - "ISSUE-*"
     tags:
       - 'v*'
     paths:
@@ -11,13 +12,87 @@ on:
       - "cmd/fluent-watcher/fluentbit/**"
       - "cmd/fluent-watcher/hooks/**"
       - "pkg/filenotify/**"
+  pull_request:
+    branches:
+      - "master"
 
 env:
-  FB_IMG: 'kubesphere/fluent-bit:v2.2.2'
-  FB_IMG_DEBUG: 'kubesphere/fluent-bit:v2.2.2-debug'
+  DOCKER_REPO: 'sarathchandra24'
+  DOCKER_IMAGE: 'fluent-bit'
+  GITHUB_IMAGE: '${{ github.repository }}/fluent-bit'
+  # FB_IMG: 'kubesphere/fluent-bit:v2.2.2'
+  # FB_IMG_DEBUG: 'kubesphere/fluent-bit:v2.2.2-debug'
 
 jobs:
-  build:
+  build-image-metadata:
+    runs-on: ubuntu-latest
+    name: Build Image Metadata
+    outputs:
+      IMG_NAME: ${{ steps.set-outputs.outputs.IMAGE_NAME }}
+      DOCKER_IMG_NAME: ${{ steps.set-outputs.outputs.DOCKER_IMG_NAME }}
+      version: ${{ steps.image-metadata.outputs.version }}
+      tags: ${{ steps.image-metadata.outputs.tags }}
+      labels: ${{ steps.image-metadata.outputs.labels }}
+
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+            
+      - name: docker metadata
+        id: image-metadata
+        uses: docker/metadata-action@v5
+        with:
+          images: "ghcr.io/${{ env.GITHUB_IMAGE }}"
+          tags: |
+            raw,latest
+            type=ref,event=branch
+            type=ref,event=pr
+            type=ref,event=tag
+            type=semver,pattern={{version}}
+            type=semver,pattern={{major}}.{{minor}}
+
+      - name: Set outputs
+        id: set-outputs
+        run: |
+          echo "IMAGE_NAME=${{ env.GITHUB_IMAGE }}" >> $GITHUB_OUTPUT
+          echo "DOCKER_IMG_NAME=${{env.DOCKER_REPO}}/${{ env.DOCKER_IMAGE }}" >> $GITHUB_OUTPUT
+
+  build-debug-image-metadata:
+    runs-on: ubuntu-latest
+    name: Build Image Metadata
+    outputs:
+      IMG_NAME: ${{ steps.set-outputs.outputs.IMAGE_NAME }}
+      DOCKER_IMG_NAME: ${{ steps.set-outputs.outputs.DOCKER_IMG_NAME }}
+      version: ${{ steps.image-metadata.outputs.version }}
+      tags: ${{ steps.image-metadata.outputs.tags }}
+      labels: ${{ steps.image-metadata.outputs.labels }}
+
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+            
+      - name: docker metadata
+        id: image-metadata
+        uses: docker/metadata-action@v5
+        with:
+          images: "ghcr.io/${{ env.GITHUB_IMAGE }}"
+          tags: |
+            raw,latest-debug
+            type=ref,event=branch
+            type=ref,event=pr
+            type=ref,event=tag
+            type=semver,pattern={{version}}-debug
+            type=semver,pattern={{major}}.{{minor}}-debug
+
+      - name: Set outputs
+        id: set-outputs
+        run: |
+          echo "IMAGE_NAME=${{ env.GITHUB_IMAGE }}" >> $GITHUB_OUTPUT
+          echo "DOCKER_IMG_NAME=${{env.DOCKER_REPO}}/${{ env.DOCKER_IMAGE }}" >> $GITHUB_OUTPUT
+
+  build-fluentbit-image:
+    needs: 
+      - build-image-metadata
     runs-on: ubuntu-latest
     timeout-minutes: 30
     name: Build Image for Fluent Bit
@@ -37,17 +112,120 @@ jobs:
         with:
           fetch-depth: 0
 
-      - name: Login to Docker Hub
+      - name: Login to GitHub Container Registry
         uses: docker/login-action@v3
         with:
-          username: ${{ secrets.REGISTRY_USER }}
-          password: ${{ secrets.REGISTRY_PASSWORD }}
+          registry: ghcr.io
+          username: ${{ github.actor }}
+          password: ${{ secrets.GITHUB_TOKEN }}
 
       - name: Set up Docker Buildx
         id: buildx
         uses: docker/setup-buildx-action@v3
 
       - name: Build and Push Image for Fluent Bit
-        run: |
-          make build-fb -e FB_IMG=${{ env.FB_IMG }}
-          make build-fb-debug -e FB_IMG_DEBUG=${{ env.FB_IMG_DEBUG }}
+        id: docker-build
+        uses: docker/build-push-action@v2
+        with:
+          context: .
+          file: ./cmd/fluent-watcher/fluentbit/Dockerfile
+          push: true
+          platforms: linux/amd64,linux/arm64
+          tags: ${{ needs.build-image-metadata.outputs.tags }}
+          labels: ${{ needs.build-image-metadata.outputs.labels }}
+
+  build-fluentbit-debug-image:
+    needs: 
+      - build-debug-image-metadata
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+    name: Build Image for Fluent Bit
+    steps:
+      - name: Install Go
+        uses: actions/setup-go@v4
+        with:
+          go-version: 1.21
+
+      - uses: actions/cache@v3
+        with:
+          path: ~/go/pkg/mod
+          key: ${{ runner.os }}-go-${{ hashFiles('**/go.sum') }}
+
+      - name: Checkout code
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - name: Login to GitHub Container Registry
+        uses: docker/login-action@v3
+        with:
+          registry: ghcr.io
+          username: ${{ github.actor }}
+          password: ${{ secrets.GITHUB_TOKEN }}
+
+      - name: Set up Docker Buildx
+        id: buildx
+        uses: docker/setup-buildx-action@v3
+      
+      - name: Build and Push Debug Image for Fluent Bit
+        id: docker-build-debug
+        uses: docker/build-push-action@v2
+        with:
+          context: .
+          file: ./cmd/fluent-watcher/fluentbit/Dockerfile.debug
+          push: true
+          platforms: linux/amd64,linux/arm64
+          tags: ${{ needs.build-debug-image-metadata.outputs.tags }}
+
+  scan-fluentbit-image:
+    name: Scan Docker Image
+    needs: 
+      - build-image-metadata
+      - build-fluentbit-image
+    uses: ./.github/workflows/scan-docker-image-action.yaml
+    with:
+      source_image: "${{ needs.build-image-metadata.outputs.IMG_NAME }}:${{ needs.build-image-metadata.outputs.version }}"
+      source_registry: ghcr.io
+      platforms: "['linux/arm64', 'linux/amd64']"
+    secrets:
+      registry_username: ${{ github.actor }}
+      registry_password: ${{ secrets.GITHUB_TOKEN }}
+  
+  release-image-to-docker-hub:
+    if: ${{ github.event_name != 'pull_request' }}
+    name: Release Image to Docker Hub
+    uses: ./.github/workflows/clone-docker-image-action.yaml
+    needs: 
+      - build-fluentbit-image
+      - scan-fluentbit-image
+      - build-image-metadata
+    with:
+      source_image: "${{ needs.build-image-metadata.outputs.IMG_NAME }}:${{ needs.build-image-metadata.outputs.version }}"
+      source_registry: ghcr.io
+      target_image: "${{ needs.build-image-metadata.outputs.DOCKER_IMG_NAME }}:${{ needs.build-image-metadata.outputs.version }}"
+      target_registry: docker.io
+      platforms: "['linux/arm64', 'linux/amd64']"
+    secrets:
+      source_registry_username:  ${{ github.actor }}
+      source_registry_token: ${{ secrets.GITHUB_TOKEN }}
+      target_registry_username: ${{ secrets.REGISTRY_USER }}
+      target_registry_token: ${{ secrets.REGISTRY_PASSWORD }}
+
+  release-debug-image-to-docker-hub:
+    if: ${{ github.event_name != 'pull_request' }}
+    name: Release Image to Docker Hub
+    uses: ./.github/workflows/clone-docker-image-action.yaml
+    needs: 
+      - build-fluentbit-debug-image
+      - build-debug-image-metadata
+    with:
+      source_image: "${{ needs.build-debug-image-metadata.outputs.IMG_NAME }}:${{ needs.build-debug-image-metadata.outputs.version }}"
+      source_registry: ghcr.io
+      target_image: "${{ needs.build-debug-image-metadata.outputs.DOCKER_IMG_NAME }}:${{ needs.build-debug-image-metadata.outputs.version }}"
+      target_registry: docker.io
+      platforms: "['linux/arm64', 'linux/amd64']"
+    secrets:
+      source_registry_username:  ${{ github.actor }}
+      source_registry_token: ${{ secrets.GITHUB_TOKEN }}
+      target_registry_username: ${{ secrets.REGISTRY_USER }}
+      target_registry_token: ${{ secrets.REGISTRY_PASSWORD }}

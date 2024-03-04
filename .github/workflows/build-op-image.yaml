@@ -3,10 +3,10 @@ name: Building Fluent Operator image
 on:
   push:
     branches:
-      - 'master'
-      - 'ISSUE-*'
+      - "master"
+      - "ISSUE-*"
     tags:
-      - 'v*'
+      - "v*"
     paths:
       - ".github/workflows/build-op-image.yaml"
       - ".github/workflows/clone-docker-image-action.yaml"
@@ -22,11 +22,11 @@ on:
 
   pull_request:
     branches:
-      - 'master'
+      - "master"
 
 env:
-  DOCKER_REPO: 'sarathchandra24'
-  DOCKER_IMAGE: 'fluent-operator'
+  DOCKER_REPO: "sarathchandra24"
+  DOCKER_IMAGE: "fluent-operator"
   GITHUB_IMAGE: "${{ github.repository }}/fluent-operator"
 
 permissions:
@@ -47,9 +47,6 @@ jobs:
     steps:
       - name: Checkout code
         uses: actions/checkout@v4
-      
-      - name: Install jq
-        uses: dcarbone/install-jq-action@v2.1.0
             
       - name: docker metadata
         id: image-metadata
@@ -114,7 +111,7 @@ jobs:
     with:
       source_image: "${{ needs.build-image-metadata.outputs.IMG_NAME }}:${{ needs.build-image-metadata.outputs.version }}"
       source_registry: ghcr.io
-      platforms: '["linux/arm64", "linux/amd64"]'
+      platforms: "['linux/arm64', 'linux/amd64']"
     secrets:
       registry_username: ${{ github.actor }}
       registry_password: ${{ secrets.GITHUB_TOKEN }}
