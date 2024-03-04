@@ -91,7 +91,7 @@
             /var/run/docker.sock:/var/run/docker.sock \ 
             quay.io/skopeo/stable \
             docker://${{ env.SOURCE_IMAGE }} \ 
-            docker://${{ env.RELEASE_IMAGE }}/
+            docker://${{ env.RELEASE_IMAGE }}
           env:
             SOURCE_IMAGE: "${{ inputs.source_registry }}/${{ inputs.source_image }}"
             RELEASE_IMAGE: "${{ inputs.target_registry }}/${{ inputs.target_image }}"
