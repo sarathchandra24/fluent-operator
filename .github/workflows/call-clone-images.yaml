@@ -51,14 +51,7 @@
             registry: ${{ inputs.source_registry }}
             username: ${{ secrets.source_registry_username }}
             password: ${{ secrets.source_registry_token }}
-  
-        - name: Login to target container registry ${{ inputs.target_registry }}
-          uses: docker/login-action@v3
-          with:
-            registry: ${{ inputs.target_registry }}
-            username: ${{ secrets.target_registry_username }}
-            password: ${{ secrets.target_registry_token }}
-        
+
         - name: Pull the source image; verify it exists
           run: 
             docker pull "$SOURCE_IMAGE" --platform=${{ matrix.platform }}
@@ -70,37 +63,21 @@
       needs: check-image-exists
       runs-on: ubuntu-latest
       steps:
-        - name: Login to source container registry ${{ inputs.source_registry }}
-          uses: docker/login-action@v3
-          with:
-            registry: ${{ inputs.source_registry }}
-            username: ${{ secrets.source_registry_username }}
-            password: ${{ secrets.source_registry_token }}
-
-        - name: Login to target container registry ${{ inputs.target_registry }}
-          uses: docker/login-action@v3
-          with:
-            registry: ${{ inputs.target_registry }}
-            username: ${{ secrets.target_registry_username }}
-            password: ${{ secrets.target_registry_token }}
-        
-        - name: list image crednetials
+        - name: Promote container images from ${{ inputs.source_registry }} to ${{ inputs.target_registry }}
           run: |
-            cat ~/.docker/config.json
-
-        # - name: Promote container images from ${{ inputs.source_registry }} to ${{ inputs.target_registry }}
-        #   run: |
-        #     echo "Promoting $SOURCE_IMAGE to $RELEASE_IMAGE"
-        #     docker run --rm  \
-        #       quay.io/skopeo/stable:latest \
-        #       copy \
-        #         --all \
-        #         --retry-times 10 \
-        #         --src-no-creds \
-        #         --dest-creds "$RELEASE_CREDS" \
-        #         "docker://$SOURCE_IMAGE" \
-        #         "docker://$RELEASE_IMAGE"
-        #   env:
-        #     SOURCE_IMAGE: "${{ inputs.source_registry }}/${{ inputs.source_image }}"
-        #     RELEASE_IMAGE: "${{ inputs.target_registry }}/${{ inputs.target_image }}"
-        #     RELEASE_CREDS: ${{ secrets.target_registry_username }}:${{ secrets.target_registry_token }}
+            echo "Promoting $SOURCE_IMAGE to $RELEASE_IMAGE"
+            docker run --rm  \
+              quay.io/skopeo/stable:latest \
+              copy \
+                --all \
+                --retry-times 10 \
+                --src-no-creds \
+                --dest-creds "$RELEASE_CREDS" \
+                --src-creds "$SOURCE_CREDS" \
+                "docker://$SOURCE_IMAGE" \
+                "docker://$RELEASE_IMAGE"
+          env:
+            SOURCE_IMAGE: "${{ inputs.source_registry }}/${{ inputs.source_image }}"
+            RELEASE_IMAGE: "${{ inputs.target_registry }}/${{ inputs.target_image }}"
+            RELEASE_CREDS: ${{ secrets.target_registry_username }}:${{ secrets.target_registry_token }}
+            SOURCE_CREDS: ${{ secrets.source_registry_username }}:${{ secrets.source_registry_token }}
