@@ -170,20 +170,6 @@ jobs:
           tags: ${{ needs.build-amd64-prod-image-metadata.outputs.tags }}
           labels: ${{ needs.build-amd64-prod-image-metadata.outputs.labels }}
 
-  scan-amd64:
-    needs: 
-      - build-amd64
-      - build-amd64-prod-image-metadata
-    name: Scan amd64 Image for Fluentd
-    uses: ./.github/workflows/scan-docker-image-action.yaml
-    with:
-      source_image: "${{ needs.build-amd64-prod-image-metadata.outputs.IMG_NAME }}:${{ needs.build-amd64-prod-image-metadata.outputs.version }}"
-      source_registry: ghcr.io
-      platforms: "['linux/amd64']"
-    secrets:
-      registry_username: ${{ github.actor }}
-      registry_password: ${{ secrets.GITHUB_TOKEN }}
-
   build-arm64-base:
     runs-on: ubuntu-latest
     needs: build-arm64-base-image-metadata
@@ -225,20 +211,6 @@ jobs:
           platforms: linux/arm64
           tags: ${{ needs.build-arm64-base-image-metadata.outputs.tags }}
           labels: ${{ needs.build-arm64-base-image-metadata.outputs.labels }}
-
-  scan-arm64-base:
-    needs: 
-      - build-arm64-base
-      - build-arm64-base-image-metadata
-    name: Scan arm64 base Image for Fluentd
-    uses: ./.github/workflows/scan-docker-image-action.yaml
-    with:
-      source_image: "${{ needs.build-arm64-base-image-metadata.outputs.IMG_NAME }}:${{ needs.build-arm64-base-image-metadata.outputs.version }}"
-      source_registry: ghcr.io
-      platforms: '["linux/arm64"]'
-    secrets:
-      registry_username: ${{ github.actor }}
-      registry_password: ${{ secrets.GITHUB_TOKEN }}
 
   release-arm64-base-image-to-docker-hub:
     if: ${{ github.event_name != 'pull_request' }}
@@ -307,29 +279,12 @@ jobs:
             BASE_IMAGE_TAG=${{ needs.build-arm64-base-image-metadata.outputs.version }}
             BASE_IMAGE=ghcr.io/${{needs.build-arm64-base-image-metadata.outputs.IMG_NAME}}
 
-  scan-arm64:
-    needs: 
-      - build-arm64
-      - build-arm64-prod-image-metadata
-    name: Scan arm64 Image for Fluentd
-    uses: ./.github/workflows/scan-docker-image-action.yaml
-    with:
-      source_image: "${{ needs.build-arm64-prod-image-metadata.outputs.IMG_NAME }}:${{ needs.build-arm64-prod-image-metadata.outputs.version }}"
-      source_registry: ghcr.io
-      platforms: "['linux/arm64']"
-    secrets:
-      registry_username: ${{ github.actor }}
-      registry_password: ${{ secrets.GITHUB_TOKEN }}
-
-  create-image-manifest:
-    if: always()
+  prod-image-manifest:
     needs: 
       - build-amd64-prod-image-metadata
       - build-arm64-prod-image-metadata
       - build-amd64
       - build-arm64
-      - scan-arm64
-      - scan-amd64
     runs-on: ubuntu-latest
     name: Create image manifest
     outputs:
@@ -372,19 +327,33 @@ jobs:
           push: true
           tags: ${{ steps.image-metadata.outputs.tags }}
           sources: |
-            ${{ needs.build-amd64-prod-image-metadata.outputs.IMG_NAME }}:${{ steps.image-metadata.outputs.version }}
-            ${{ needs.build-arm64-prod-image-metadata.outputs.IMG_NAME }}:${{ steps.image-metadata.outputs.version }}
+            ghcr.io/${{ needs.build-amd64-prod-image-metadata.outputs.IMG_NAME }}:${{ needs.build-amd64-prod-image-metadata.outputs.version }}
+            ghcr.io/${{ needs.build-arm64-prod-image-metadata.outputs.IMG_NAME }}:${{ needs.build-arm64-prod-image-metadata.outputs.version }}
+
+  scan-image:
+    needs: 
+      - prod-image-manifest
+    name: Scan Fluentd Image
+    uses: ./.github/workflows/scan-docker-image-action.yaml
+    with:
+      source_image: "${{ needs.prod-image-manifest.outputs.IMG_NAME }}:${{ needs.prod-image-manifest.outputs.version }}"
+      source_registry: ghcr.io
+      platforms: "['linux/arm64', 'linux/amd64']"
+    secrets:
+      registry_username: ${{ github.actor }}
+      registry_password: ${{ secrets.GITHUB_TOKEN }}
 
   release-images-to-docker-hub:
     if: ${{ github.event_name != 'pull_request' }}
     name: Release Image to Docker Hub
     uses: ./.github/workflows/clone-docker-image-action.yaml
     needs: 
-      - create-image-manifest
+      - prod-image-manifest
+      - scan-image
     with:
-      source_image: "${{ needs.create-image-manifest.outputs.IMG_NAME }}:${{ needs.create-image-manifest.outputs.version }}"
+      source_image: "${{ needs.prod-image-manifest.outputs.IMG_NAME }}:${{ needs.prod-image-manifest.outputs.version }}"
       source_registry: ghcr.io
-      target_image: "${{ needs.create-image-manifest.outputs.DOCKER_IMG_NAME }}:${{ needs.create-image-manifest.outputs.version }}"
+      target_image: "${{ needs.prod-image-manifest.outputs.DOCKER_IMG_NAME }}:${{ needs.prod-image-manifest.outputs.version }}"
       target_registry: docker.io
       platforms: "['linux/arm64', 'linux/amd64']"
     secrets:
