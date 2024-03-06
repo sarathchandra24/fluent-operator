@@ -24,7 +24,7 @@ on:
       - "master"
 
 env:
-  DOCKER_REPO: "kubesphere"
+  DOCKER_REPO: "sarathchandra24"
   DOCKER_IMAGE: "fluent-operator"
   GITHUB_IMAGE: "${{ github.repository }}/fluent-operator"
 
