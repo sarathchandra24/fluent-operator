@@ -69,6 +69,7 @@
             docker run --rm  \
               quay.io/skopeo/stable:latest \
               copy \
+                --additional-tag latest \
                 --all \
                 --retry-times 10 \
                 --dest-creds "$RELEASE_CREDS" \

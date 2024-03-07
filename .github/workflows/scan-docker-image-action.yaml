@@ -65,5 +65,5 @@
           uses: hands-lab/dockle-action@v1
           with:
             image: ${{ inputs.source_registry }}/${{ inputs.source_image }}
-            exit-code: "0"
+            exit-code: "1"
             exit-level: WARN
