@@ -1,49 +1,77 @@
-name: Manually running clone images to docker hub
+name: Copy Docker Images
 
 on:
-    workflow_dispatch:
-        inputs:
-            source_image: 
-              description: The source image to clone
-              required: true
-              type: string
-            source_registry:
-              description: The source registry
-              required: true
-              type: string
-            target_image:
-              description: The target image to clone
-              required: true
-              type: string
-            target_registry:
-              description: 'The target registry'
-              required: true
-              type: string
-            image_tags:
-              description: 'The tags to clone'
-              required: true
-              type: string
-              default: '["latest"]'
-jobs:
-    release-images-to-docker-hub:
-        if: ${{ github.event_name != 'pull_request' }}
-        name: Release Image to Docker Hub
-        uses: ./.github/workflows/clone-docker-image-action.yaml
-        with:
-            source_image: ${{ inputs.source_image }}
-            source_registry: ghcr.io            
-            target_image: ${{ inputs.target_image }}
-            target_registry: docker.io
-            image_tags: ${{ inputs.image_tags }}
-        secrets:
-            source_registry_username: ${{ github.actor }}
-            source_registry_token: ${{ secrets.GITHUB_TOKEN }}
-            target_registry_username: ${{ secrets.REGISTRY_USER }}
-            target_registry_token: ${{ secrets.REGISTRY_PASSWORD }}
+  push:
+    branches:
+      - main
+      - personal-*
+env:
+  DOCKER_REPO: 'sarathchandra24'
+  DOCKER_IMAGE: 'fluent-bit'
+  GITHUB_IMAGE: '${{ github.repository }}/fluent-bit'
 
-    # Add a new job with no dependencies
-    dummy-job:
-        runs-on: ubuntu-latest
-        steps:
-            - name: Dummy Step
-              run: echo "This is a dummy job."
+jobs:
+  copy_images:
+    runs-on: ubuntu-latest
+    
+    steps:
+    - name: Checkout code
+      uses: actions/checkout@v2
+          
+    - name: docker metadata
+      id: metadata
+      uses: docker/metadata-action@v5
+      with:
+        images: "ghcr.io/${{env.GITHUB_IMAGE}}"
+        tags: |
+          raw,latest
+          type=ref,event=branch
+          type=ref,event=pr
+          type=ref,event=tag
+          type=semver,pattern={{version}}
+          type=semver,pattern={{major}}.{{minor}}
+
+    - name: Install Skopeo
+      run: sudo apt-get update && sudo apt-get install -y skopeo
+    
+    - name: Set up Docker Buildx
+      id: buildx
+      uses: docker/setup-buildx-action@v3
+
+    - name: Build and Push Image for Fluent Bit
+      id: docker-build
+      uses: docker/build-push-action@v5
+      with:
+        context: .
+        file: ./cmd/fluent-watcher/fluentbit/Dockerfile
+        push: true
+        platforms: linux/amd64,linux/arm64
+        tags: ${{ steps.metadata.outputs.tags }}
+        labels: ${{ steps.metadata.outputs.labels }}
+
+    - name: Copy images
+      run: |
+        # Define your source and destination repositories
+        DEST_REPO="docker.io/username/repository"
+
+        # Define your credentials
+        SRC_CREDS="username:token"
+        DEST_CREDS="username:password"
+
+        # Get the list of tags from metadata action output
+        TAGS=$(echo "${{ steps.metadata.outputs.tags }}")
+
+        # Convert the string of tags to an array
+        IFS=',' read -ra TAGS_ARRAY <<< "$TAGS"
+
+        # Loop through each tag and copy the image
+        for tag in "${TAGS_ARRAY[@]}"; do
+          skopeo copy --src-creds=$SOURCE_IMAGE --dest-creds=$RELEASE_CREDS \
+          "docker://$SOURCE_IMAGE:$tag" \
+          "docker://$RELEASE_IMAGE:$tag"
+        done
+      env:
+          SOURCE_IMAGE: "ghcr.io/${{env.GITHUB_IMAGE}}"
+          RELEASE_IMAGE: "docker.io/${{env.DOCKER_REPO}}/${{ env.DOCKER_IMAGE }}"
+          RELEASE_CREDS: "${{ secrets.REGISTRY_USER }}:${{ secrets.REGISTRY_PASSWORD}}"
+          SOURCE_CREDS: "${{ github.actor }}:${{ secrets.GITHUB_TOKEN }}"
