@@ -1,0 +1,49 @@
+name: Manually running clone images to docker hub
+
+on:
+    workflow_dispatch:
+        inputs:
+            source_image: 
+              description: The source image to clone
+              required: true
+              type: string
+            source_registry:
+              description: The source registry
+              required: true
+              type: string
+            target_image:
+              description: The target image to clone
+              required: true
+              type: string
+            target_registry:
+              description: 'The target registry'
+              required: true
+              type: string
+            image_tags:
+              description: 'The tags to clone'
+              required: true
+              type: string
+              default: '["latest"]'
+jobs:
+    release-images-to-docker-hub:
+        if: ${{ github.event_name != 'pull_request' }}
+        name: Release Image to Docker Hub
+        uses: ./.github/workflows/clone-docker-image-action.yaml
+        with:
+            source_image: ${{ inputs.source_image }}
+            source_registry: ghcr.io            
+            target_image: ${{ inputs.target_image }}
+            target_registry: docker.io
+            image_tags: ${{ inputs.image_tags }}
+        secrets:
+            source_registry_username: ${{ github.actor }}
+            source_registry_token: ${{ secrets.GITHUB_TOKEN }}
+            target_registry_username: ${{ secrets.REGISTRY_USER }}
+            target_registry_token: ${{ secrets.REGISTRY_PASSWORD }}
+
+    # Add a new job with no dependencies
+    dummy-job:
+        runs-on: ubuntu-latest
+        steps:
+            - name: Dummy Step
+              run: echo "This is a dummy job."
