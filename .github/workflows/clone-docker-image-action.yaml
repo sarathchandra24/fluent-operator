@@ -71,6 +71,11 @@
           image_tags: ${{fromJson(inputs.image_tags)}}
       runs-on: ubuntu-latest
       steps:
+        - name: Pull skopeo image
+          run: |
+            docker pull quay.io/skopeo/stable:latest
+          shell: bash
+          
         - name: Promote container images from ${{ inputs.source_registry }} to ${{ inputs.target_registry }}
           run: |
             echo "Promoting $SOURCE_IMAGE to $RELEASE_IMAGE"
