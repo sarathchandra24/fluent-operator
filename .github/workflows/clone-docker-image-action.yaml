@@ -89,7 +89,7 @@
                 "docker://$SOURCE_IMAGE" \
                 "docker://$RELEASE_IMAGE"
           env:
-            SOURCE_IMAGE: "${{ inputs.source_registry }}/${{ inputs.source_image }}:${{ matrix.image_tags }}"
+            SOURCE_IMAGE: "${{ inputs.source_registry }}/${{ inputs.source_image }}"
             RELEASE_IMAGE: "${{ inputs.target_registry }}/${{ inputs.target_image }}:${{ matrix.image_tags }}"
             RELEASE_CREDS: ${{ secrets.target_registry_username }}:${{ secrets.target_registry_token }}
             SOURCE_CREDS: ${{ secrets.source_registry_username }}:${{ secrets.source_registry_token }}
