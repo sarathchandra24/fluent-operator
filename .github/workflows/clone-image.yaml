@@ -18,7 +18,7 @@ jobs:
   copy_images_metadata:
     runs-on: ubuntu-latest
     outputs:
-      image_tags: ${{ steps.release-metadata.outputs.tags }}
+      image_tags: ${{ steps.convert-tags.outputs.TAGS }}
       image_labels: ${{ steps.release-metadata.outputs.labels }}
       docker_image_name: ${{ env.DOCKER_IMAGE }}
       docker_image_repo: ${{ env.DOCKER_REPO }}
@@ -52,9 +52,6 @@ jobs:
           type=ref,event=tag
           type=semver,pattern={{version}}
           type=semver,pattern={{major}}.{{minor}}
-
-    - name: Install Skopeo
-      run: sudo apt-get update && sudo apt-get install -y skopeo
     
     - name: Set up Docker Buildx
       id: buildx
@@ -81,6 +78,32 @@ jobs:
         tags: ${{ steps.image-metadata.outputs.tags }}
         labels: ${{ steps.image-metadata.outputs.labels }}
 
+    - name: Convert tags to JSON array
+      id: convert-tags
+      run: |
+
+        # Get the line-separated list of tags
+        TAGS="${{ steps.release-metadata.outputs.tags }}"
+
+        # Initialize an empty array
+        JSON_TAGS="["
+        
+        # Loop through each tag and append to the JSON array
+        while read -r tag; do
+          JSON_TAGS+="\"$tag\","
+        done <<< "$TAGS"
+
+        echo "TAGS=$JSON_TAGS"
+        # Remove the trailing comma and close the array
+        JSON_TAGS="${JSON_TAGS%,}]"
+        echo "TAGS=$JSON_TAGS"
+        # Output the JSON array
+        echo "TAGS=$JSON_TAGS" >> $GITHUB_OUTPUT
+
+    - name: Use the JSON array
+      run: |
+        echo "JSON tags: ${{ steps.convert-tags.outputs.TAGS }}"
+
     # - name: Copy images
     #   run: |
     #     # Get the list of tags from metadata action output
@@ -91,29 +114,38 @@ jobs:
     #     echo "$TAGS" 
     #     echo "$TAGS" | while IFS= read -r tag; do
     #       echo "Copying $tag"
-    #       skopeo copy --src-creds=$SOURCE_CREDS --dest-creds=$RELEASE_CREDS \
-    #       "docker://$SOURCE_IMAGE:$tag" \
-    #       "docker://$RELEASE_IMAGE:$tag"
+    #       docker run --rm  \
+    #         quay.io/skopeo/stable:latest \
+    #         copy \
+    #           --all \
+    #           --retry-times 10 \
+    #           --dest-creds "$RELEASE_CREDS" \
+    #           --src-creds "$SOURCE_CREDS" \
+    #           "docker://$SOURCE_IMAGE:$tag" \
+    #           "docker://$RELEASE_IMAGE:$tag"
     #     done
+        
     #   env:
     #       SOURCE_IMAGE: "ghcr.io/${{env.GITHUB_IMAGE}}"
     #       RELEASE_IMAGE: "docker.io/${{env.DOCKER_REPO}}/${{ env.DOCKER_IMAGE }}"
     #       RELEASE_CREDS: "${{ secrets.REGISTRY_USER }}:${{ secrets.REGISTRY_PASSWORD}}"
     #       SOURCE_CREDS: "${{ github.actor }}:${{ secrets.GITHUB_TOKEN }}"
 
-  clone-docker-image:
+  release-debug-image-to-docker-hub:
+    if: ${{ github.event_name != 'pull_request' }}
+    name: Release debug image to Docker Hub
     uses: ./.github/workflows/clone-docker-image-action.yaml
-    needs: copy_images_metadata
+    needs: 
+      - copy_images_metadata
     with:
-      source_image: "${{needs.copy_images_metadata.outputs.github_image}}"
+      source_image: "${{ needs.copy_images_metadata.outputs.github_image }}"
       source_registry: ghcr.io
-      target_image: "]${{needs.copy_images_metadata.outputs.docker_image_repo}}/${{ needs.copy_images_metadata.outputs.docker_image_name }}"
+      target_image: "${{ needs.copy_images_metadata.outputs.docker_image_repo }}/${{ needs.copy_images_metadata.outputs.docker_image_name}}"
       target_registry: docker.io
       platforms: "['linux/arm64', 'linux/amd64']"
       image_tags: ${{ needs.copy_images_metadata.outputs.image_tags }}
     secrets:
+      source_registry_username:  ${{ github.actor }}
       source_registry_token: ${{ secrets.GITHUB_TOKEN }}
-      target_registry_token: ${{ secrets.REGISTRY_PASSWORD }}
-      source_registry_username: ${{ github.actor }}
       target_registry_username: ${{ secrets.REGISTRY_USER }}
-      
+      target_registry_token: ${{ secrets.REGISTRY_PASSWORD }}
