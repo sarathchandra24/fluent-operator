@@ -24,6 +24,11 @@
           required: false
           type: string
           default: '["linux/arm64", "linux/amd64"]'
+        image_tags:
+          description: 'The tags to clone'
+          required: true
+          type: string
+          default: '["latest"]'
       secrets: 
         source_registry_token:
           description: The Github token or similar to authenticate with for the registry.
@@ -61,6 +66,9 @@
   
     push-image:
       needs: check-image-exists
+      strategy:
+        matrix:
+          image_tags: ${{fromJson(inputs.image_tags)}}
       runs-on: ubuntu-latest
       steps:
         - name: Promote container images from ${{ inputs.source_registry }} to ${{ inputs.target_registry }}
@@ -77,6 +85,6 @@
                 "docker://$RELEASE_IMAGE"
           env:
             SOURCE_IMAGE: "${{ inputs.source_registry }}/${{ inputs.source_image }}"
-            RELEASE_IMAGE: "${{ inputs.target_registry }}/${{ inputs.target_image }}"
+            RELEASE_IMAGE: "${{ inputs.target_registry }}/${{ inputs.target_image }}:${{ matrix.image_tags }}"
             RELEASE_CREDS: ${{ secrets.target_registry_username }}:${{ secrets.target_registry_token }}
             SOURCE_CREDS: ${{ secrets.source_registry_username }}:${{ secrets.source_registry_token }}

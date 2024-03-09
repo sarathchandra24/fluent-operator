@@ -13,7 +13,7 @@ on:
       - "pkg/filenotify/**"
 
 env:
-  DOCKER_REPO: 'kubesphere'
+  DOCKER_REPO: 'sarathchandra24'
   DOCKER_IMAGE: 'fluentd'
   GITHUB_IMAGE: '${{ github.repository }}/fluentd'
 
@@ -98,6 +98,7 @@ jobs:
       version: ${{ steps.image-metadata.outputs.version }}
       tags: ${{ steps.image-metadata.outputs.tags }}
       labels: ${{ steps.image-metadata.outputs.labels }}
+      tags_list: ${{ steps.tags-converter.outputs.TAGS }}
     steps:
       - name: Checkout code
         uses: actions/checkout@v4
@@ -117,6 +118,44 @@ jobs:
             type=ref,event=tag
             type=semver,pattern={{version}}
             type=semver,pattern={{major}}.{{minor}}
+      
+      - name: docker metadata for tags
+        id: tags-metadata
+        uses: docker/metadata-action@v5
+        with:
+          flavor: |
+            latest=false
+            suffix=-arm64-base
+          tags: |
+            raw,latest
+            type=ref,event=branch
+            type=ref,event=pr
+            type=ref,event=tag
+            type=semver,pattern={{version}}
+            type=semver,pattern={{major}}.{{minor}}
+
+      - name: Convert tags to JSON array
+        id: tags-converter
+        run: |
+
+          # Get the line-separated list of tags
+          TAGS="${{ steps.tags-metadata.outputs.tags }}"
+
+          # Initialize an empty array
+          JSON_TAGS="["
+          
+          # Loop through each tag and append to the JSON array
+          while read -r tag; do
+            JSON_TAGS+="\"$tag\","
+          done <<< "$TAGS"
+
+          # print the JSON array
+          echo "TAGS=$JSON_TAGS"
+
+          # Remove the trailing comma and close the array
+          JSON_TAGS="${JSON_TAGS%,}]"
+          # Output the JSON array
+          echo "TAGS=$JSON_TAGS" >> $GITHUB_OUTPUT
 
       - name: Set outputs
         id: set-outputs
@@ -216,11 +255,12 @@ jobs:
       - build-arm64-base-image-metadata
       - build-arm64-base
     with:
-      source_image: "${{ needs.build-arm64-base-image-metadata.outputs.IMG_NAME }}:${{ needs.build-arm64-base-image-metadata.outputs.version }}"
+      source_image: "${{ needs.build-arm64-base-image-metadata.outputs.IMG_NAME }}"
       source_registry: ghcr.io
-      target_image: "${{ needs.build-arm64-base-image-metadata.outputs.DOCKER_IMG_NAME }}:${{ needs.build-arm64-base-image-metadata.outputs.version }}"
+      target_image: "${{ needs.build-arm64-base-image-metadata.outputs.DOCKER_IMG_NAME }}"
       target_registry: docker.io
       platforms: "['linux/arm64']"
+      image_tags: ${{ needs.build-arm64-base-image-metadata.outputs.tags_list }}
     secrets:
       source_registry_username:  ${{ github.actor }}
       source_registry_token: ${{ secrets.GITHUB_TOKEN }}
@@ -289,6 +329,7 @@ jobs:
       version: ${{ steps.image-metadata.outputs.version }}
       tags: ${{ steps.image-metadata.outputs.tags }}
       labels: ${{ steps.image-metadata.outputs.labels }}
+      tags_list: ${{ steps.tags-converter.outputs.TAGS }}
     steps:
       - uses: docker/login-action@v3
         with:
@@ -301,8 +342,6 @@ jobs:
         uses: docker/metadata-action@v5
         with:
           images: "ghcr.io/${{ env.GITHUB_IMAGE }}"
-          flavor: |
-            latest=false
           tags: |
             raw,latest
             type=ref,event=branch
@@ -310,6 +349,41 @@ jobs:
             type=ref,event=tag
             type=semver,pattern={{version}}
             type=semver,pattern={{major}}.{{minor}}
+
+      - name: docker metadata for tags
+        id: tags-metadata
+        uses: docker/metadata-action@v5
+        with:
+          tags: |
+            raw,latest
+            type=ref,event=branch
+            type=ref,event=pr
+            type=ref,event=tag
+            type=semver,pattern={{version}}
+            type=semver,pattern={{major}}.{{minor}}
+
+      - name: Convert tags to JSON array
+        id: tags-converter
+        run: |
+
+          # Get the line-separated list of tags
+          TAGS="${{ steps.tags-metadata.outputs.tags }}"
+
+          # Initialize an empty array
+          JSON_TAGS="["
+          
+          # Loop through each tag and append to the JSON array
+          while read -r tag; do
+            JSON_TAGS+="\"$tag\","
+          done <<< "$TAGS"
+
+          # print the JSON array
+          echo "TAGS=$JSON_TAGS"
+
+          # Remove the trailing comma and close the array
+          JSON_TAGS="${JSON_TAGS%,}]"
+          # Output the JSON array
+          echo "TAGS=$JSON_TAGS" >> $GITHUB_OUTPUT
             
       - name: Set outputs
         id: set-outputs
@@ -349,9 +423,10 @@ jobs:
     with:
       source_image: "${{ needs.prod-image-manifest.outputs.IMG_NAME }}:${{ needs.prod-image-manifest.outputs.version }}"
       source_registry: ghcr.io
-      target_image: "${{ needs.prod-image-manifest.outputs.DOCKER_IMG_NAME }}:${{ needs.prod-image-manifest.outputs.version }}"
+      target_image: "${{ needs.prod-image-manifest.outputs.DOCKER_IMG_NAME }}"
       target_registry: docker.io
       platforms: "['linux/arm64', 'linux/amd64']"
+      image_tags: ${{ needs.prod-image-manifest.outputs.tags_list }}
     secrets:
       source_registry_username:  ${{ github.actor }}
       source_registry_token: ${{ secrets.GITHUB_TOKEN }}
