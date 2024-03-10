@@ -24,11 +24,6 @@
           required: false
           type: string
           default: '["linux/arm64", "linux/amd64"]'
-        image_tags:
-          description: 'The tags to clone'
-          required: true
-          type: string
-          default: '["latest"]'
       secrets: 
         source_registry_token:
           description: The Github token or similar to authenticate with for the registry.
@@ -63,12 +58,53 @@
           env:
             SOURCE_IMAGE: ${{ inputs.source_registry }}/${{ inputs.source_image }}
           shell: bash
+    create-tags:
+      runs-on: ubuntu-latest
+      outputs:
+        tags: ${{ steps.tags-converter.outputs.TAGS }}
+      steps:
+        - name: docker metadata for tags
+          id: tags-metadata
+          uses: docker/metadata-action@v5
+          with:
+            tags: |
+              raw,latest
+              type=ref,event=branch
+              type=ref,event=pr
+              type=ref,event=tag
+              type=semver,pattern={{version}}
+              type=semver,pattern={{major}}.{{minor}}
+
+        - name: Convert tags to JSON array
+          id: tags-converter
+          run: |
+
+            # Get the line-separated list of tags
+            TAGS="${{ steps.tags-metadata.outputs.tags }}"
+
+            # Initialize an empty array
+            JSON_TAGS="["
+            
+            # Loop through each tag and append to the JSON array
+            while read -r tag; do
+              JSON_TAGS+="\"$tag\","
+            done <<< "$TAGS"
+
+            # print the JSON array
+            echo "TAGS=$JSON_TAGS"
+
+            # Remove the trailing comma and close the array
+            JSON_TAGS="${JSON_TAGS%,}]"
+            # Output the JSON array
+            echo "TAGS=$JSON_TAGS" >> $GITHUB_OUTPUT
   
     push-image:
-      needs: check-image-exists
+      needs: 
+        - check-image-exists
+        - create-tags
       strategy:
         matrix:
-          image_tags: ${{fromJson(inputs.image_tags)}}
+          image_tags: ${{fromJson(needs.create-tags.outputs.tags)}}
       runs-on: ubuntu-latest
       steps:
         - name: Pull skopeo image
