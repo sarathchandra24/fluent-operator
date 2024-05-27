@@ -1,24 +1,12 @@
 name: Building Fluent Bit image
 
 on:
-  push:
-    branches:
-      - 'master'
-    tags:
-      - 'v*'
-    paths:
-      - ".github/workflows/build-fb-image.yaml"
-      - "cmd/fluent-watcher/fluentbit/**"
-      - "cmd/fluent-watcher/hooks/**"
-      - "pkg/filenotify/**"
-  pull_request:
-    branches:
-      - "master"
-    paths:
-      - ".github/workflows/build-fb-image.yaml"
-      - "cmd/fluent-watcher/fluentbit/**"
-      - "cmd/fluent-watcher/hooks/**"
-      - "pkg/filenotify/**"
+  workflow_dispatch:
+    inputs:
+      docker_tag_version:
+        description: 'Docker tag version'
+        required: true
+        default: '3.0.4'
 
 env:
   DOCKER_REPO: 'kubesphere'
@@ -42,6 +30,16 @@ jobs:
     steps:
       - name: Checkout code
         uses: actions/checkout@v4
+
+      - name: Extract version parts
+        id: extract_version
+        run: |
+          VERSION=${{ github.event.inputs.docker_tag_version }}
+          VERSION_WITHOUT_V=${VERSION#v}
+          MAJOR_MINOR=$(echo $VERSION_WITHOUT_V | cut -d. -f1-2)
+
+          echo "VERSION_WITHOUT_V=$VERSION_WITHOUT_V" >> $GITHUB_ENV
+          echo "MAJOR_MINOR=$MAJOR_MINOR" >> $GITHUB_ENV
             
       - name: docker metadata for building
         id: image-metadata
@@ -50,11 +48,12 @@ jobs:
           images: "ghcr.io/${{ env.GITHUB_IMAGE }}"
           tags: |
             raw,latest
-            type=ref,event=branch
-            type=ref,event=pr
-            type=ref,event=tag
-            type=semver,pattern={{version}}
-            type=semver,pattern={{major}}.{{minor}}
+            type=raw,value=${{ github.event.inputs.docker_tag_version }}
+            type=raw,value=v${{ github.event.inputs.docker_tag_version }}
+            type=raw,value=${{ env.MAJOR_MINOR }}
+            type=raw,value=v${{ env.MAJOR_MINOR }}
+        env:
+          MAJOR_MINOR: ${{ env.MAJOR_MINOR }}
 
       - name: Set outputs
         id: set-outputs
@@ -75,6 +74,16 @@ jobs:
       - name: Checkout code
         uses: actions/checkout@v4
 
+      - name: Extract version parts
+        id: extract_version
+        run: |
+          VERSION=${{ github.event.inputs.docker_tag_version }}
+          VERSION_WITHOUT_V=${VERSION#v}
+          MAJOR_MINOR=$(echo $VERSION_WITHOUT_V | cut -d. -f1-2)
+
+          echo "VERSION_WITHOUT_V=$VERSION_WITHOUT_V" >> $GITHUB_ENV
+          echo "MAJOR_MINOR=$MAJOR_MINOR" >> $GITHUB_ENV
+
       - name: docker metadata
         id: image-metadata
         uses: docker/metadata-action@v5
@@ -84,12 +93,12 @@ jobs:
             latest=false
             suffix=-debug
           tags: |
-            raw,latest
-            type=ref,event=branch
-            type=ref,event=pr
-            type=ref,event=tag
-            type=semver,pattern={{version}}
-            type=semver,pattern={{major}}.{{minor}}
+            type=raw,value=${{ github.event.inputs.docker_tag_version }}
+            type=raw,value=v${{ github.event.inputs.docker_tag_version }}
+            type=raw,value=${{ env.MAJOR_MINOR }}
+            type=raw,value=v${{ env.MAJOR_MINOR }}
+        env:
+          MAJOR_MINOR: ${{ env.MAJOR_MINOR }}
       
       - name: Set outputs
         id: set-outputs
