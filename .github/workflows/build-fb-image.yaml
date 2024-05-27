@@ -4,12 +4,12 @@ on:
   workflow_dispatch:
     inputs:
       docker_tag_version:
-        description: 'Docker tag version'
+        description: 'Fluent Bit image release version'
         required: true
         default: '3.0.4'
 
 env:
-  DOCKER_REPO: 'kubesphere'
+  DOCKER_REPO: 'sarathchandra24'
   DOCKER_IMAGE: 'fluent-bit'
   GITHUB_IMAGE: '${{ github.repository }}/fluent-bit'
 
